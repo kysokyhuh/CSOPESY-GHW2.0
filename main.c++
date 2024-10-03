@@ -3,6 +3,12 @@
 #include <string>
 #include <cctype>
 #include <algorithm>
+#include <map>
+#include <ctime>
+#include <sstream>
+
+// Global storage for screens
+std::map<std::string, std::map<std::string, std::string> > screens; // Added space between >>
 
 void displayMenu() {
     std::cout << "           Welcome to CSOPESY commandline!!" << std::endl << std::endl;
@@ -22,30 +28,53 @@ void displayMenu() {
     std::cout << "           Enter a command: ";
 }
 
-// https://patorjk.com/software/taag/#p=display&h=2&v=3&f=Sub-Zero&t=CSOPESY
+// ASCII Art for Header
 void displayHeader() {
-    std::cout << " ______  ______  ______  ______  ______  ______  __  __    \n";
-    std::cout << "/\\  ___\\/\\  ___\\/\\  __ \\/\\  == \\/\\  ___\\/\\  ___\\/\\ \\_\\ \\   \n";
-    std::cout << "\\ \\ \\___\\ \\___  \\ \\ \\/\\ \\ \\  _-/\\ \\  __\\\\ \\___  \\ \\____ \\  \n";
+    std::cout << " ____  ____  ____  ____  ____  ____  _  _    \n";
+    std::cout << "/\\  __\\/\\  ___\\/\\  _ \\/\\  == \\/\\  ___\\/\\  ___\\/\\ \\_\\ \\   \n";
+    std::cout << "\\ \\ \\___\\ \\___  \\ \\ \\/\\ \\ \\  -/\\ \\  __\\\\ \\__  \\ \\____ \\  \n";
     std::cout << " \\ \\_____\\/\\_____\\ \\_____\\ \\_\\   \\ \\_____\\/\\_____\\/\\_____\\ \n";
     std::cout << "  \\/_____/\\/_____/\\/_____/\\/_/    \\/_____/\\/_____/\\/_____/ \n";
     std::cout << "                                                          \n";
     displayMenu();
 }
 
-int validateCommand(std::string str) {
+// Function to create a new screen
+void createScreen(const std::string& name) {
+    time_t now = time(0);
+    tm* ltm = localtime(&now);
+    char timestamp[20];
+    strftime(timestamp, 20, "%m/%d/%Y, %I:%M:%S %p", ltm);
+    std::map<std::string, std::string> screenData;
+    screenData["name"] = name;
+    screenData["current_line"] = "0";
+    screenData["total_lines"] = "100";
+    screenData["timestamp"] = timestamp;
+    screens[name] = screenData;
+    std::cout << "Screen '" << name << "' created." << std::endl;
+}
 
+// Function to display a screen
+void showScreen(const std::string& name) {
+    if (screens.find(name) != screens.end()) {
+        std::cout << "----------------------------------------" << std::endl;
+        std::cout << "Process Name: " << screens[name]["name"] << std::endl;
+        std::cout << "Instruction: " << screens[name]["current_line"] << "/" << screens[name]["total_lines"] << std::endl;
+        std::cout << "Created On: " << screens[name]["timestamp"] << std::endl;
+        std::cout << "----------------------------------------" << std::endl;
+        std::cout << "Type 'exit' to go back to the main menu." << std::endl;
+    } else {
+        std::cout << "Screen '" << name << "' does not exist." << std::endl;
+    }
+}
+
+// Function to validate user commands
+int validateCommand(std::string str) {
     std::string command;
     int result;
     command = str;
-    // for (char &c : command) {
-    //     c = toupper(c);
-    // }
-    
+
     std::transform(command.begin(), command.end(), command.begin(), ::toupper);
-
-
-    //std::cout << command << std::endl; FOR TEST PURPOSES 
 
     if(command == "INITIALIZE") {
         result = 1;
@@ -74,19 +103,51 @@ int validateCommand(std::string str) {
     return result;
 }
 
+// Execute user commands
 int commandFunctions(int command) {
     std::string tryAgain;
-
-    // std::cout << command << std::endl; FOR TEST PURPOSES 
 
     switch (command) {
         case 1: 
             std::cout << "           Initialize command recognized. Doing something." << std::endl;
             break;
 
-        case 2:
-            std::cout << "           Screen command recognized. Doing something." << std::endl;
+        case 2: {
+            std::cout << "           Screen command recognized. Opening screen manager." << std::endl;
+            // Call to the CLI screen manager
+            std::string screenCommand;
+            while (true) {
+                std::cout << "> ";
+                std::getline(std::cin, screenCommand);
+                std::istringstream iss(screenCommand);
+                std::string subCommand;
+                iss >> subCommand;
+                if (subCommand == "screen") {
+                    std::string option;
+                    iss >> option;
+                    if (option == "-s") {
+                        std::string name;
+                        iss >> name;
+                        if (screens.find(name) != screens.end()) {
+                            std::cout << "Screen '" << name << "' already exists." << std::endl;
+                        } else {
+                            createScreen(name);
+                        }
+                    } else if (option == "-r") {
+                        std::string name;
+                        iss >> name;
+                        showScreen(name);
+                    } else {
+                        std::cout << "Unknown screen command. Please try again." << std::endl;
+                    }
+                } else if (screenCommand == "exit") {
+                    break; // Exit the screen manager
+                } else {
+                    std::cout << "Unknown command. Please try again." << std::endl;
+                }
+            }
             break;
+        }
 
         case 3:
             std::cout << "           Scheduler-test command recognized. Doing something." << std::endl;
@@ -97,7 +158,7 @@ int commandFunctions(int command) {
             break;
 
         case 5:
-            std::cout << "           Report-utilcommand recognized. Doing something." << std::endl;
+            std::cout << "           Report-util command recognized. Doing something." << std::endl;
             break;
         
         case 6: 
@@ -105,31 +166,30 @@ int commandFunctions(int command) {
             break;
 
         case 7:
-            return 1;
+            return 1; // Exit
             break;
 
         default: 
            std::cout << "This command does not exist! Please enter a valid command!" << std::endl << std::endl;
-    
     }
     return 0;
 }
 
+// Main loop for handling user input
 int main() {
-
     int exit = 0;
     int result;
     std::string userInput;
 
     while (exit == 0) {
-        do{
+        do {
             displayHeader();
             std::getline(std::cin, userInput);
             std::cout << "" << std::endl;
-            int result = validateCommand(userInput); 
+            result = validateCommand(userInput); 
             exit = commandFunctions(result);
         } while (result == 101);
     }
 
-    
+    return 0;
 }
