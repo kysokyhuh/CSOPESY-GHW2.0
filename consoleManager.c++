@@ -68,9 +68,10 @@ int consoleManager::handleCommand(int command) {
     return 0; // Continue the loop
 }
 
+// Function for screen-related commands
 void consoleManager::screenCLI() {
     std::string input;
-    std::cout << "Main Menu" << std::endl;
+    std::cout << "Screen Menu" << std::endl;
     std::cout << "Type 'screen -s <name>' to create a new screen." << std::endl;
     std::cout << "Type 'screen -r <name>' to reattach to a screen." << std::endl;
     std::cout << "----------------------------------------" << std::endl;
@@ -106,31 +107,124 @@ void consoleManager::screenCLI() {
     }
 }
 
-// Function to create a new screen
 void consoleManager::createScreen(const std::string& name) {
     time_t now = time(0);
     tm* ltm = localtime(&now);
     char timestamp[20];
     strftime(timestamp, 20, "%m/%d/%Y, %I:%M:%S %p", ltm);
+    
     std::map<std::string, std::string> screenData;
     screenData["name"] = name;
     screenData["current_line"] = "0";
     screenData["total_lines"] = "100";
     screenData["timestamp"] = timestamp;
+    
     screens[name] = screenData;
     std::cout << "Screen '" << name << "' created." << std::endl;
 }
 
-// Function to show the screen
 void consoleManager::showScreen(const std::string& name) {
     if (screens.find(name) != screens.end()) {
-        std::cout << "----------------------------------------" << std::endl;
-        std::cout << "Process Name: " << screens[name]["name"] << std::endl;
-        std::cout << "Instruction: " << screens[name]["current_line"] << "/" << screens[name]["total_lines"] << std::endl;
-        std::cout << "Created On: " << screens[name]["timestamp"] << std::endl;
-        std::cout << "----------------------------------------" << std::endl;
-        std::cout << "Type 'exit' to go back to the main menu." << std::endl;
+        std::map<std::string, std::string>& screenData = screens[name];
+        std::cout << "Screen Name: " << screenData["name"] << std::endl;
+        std::cout << "Current Line: " << screenData["current_line"] << std::endl;
+        std::cout << "Total Lines: " << screenData["total_lines"] << std::endl;
+        std::cout << "Timestamp: " << screenData["timestamp"] << std::endl;
     } else {
-        std::cout << "Screen '" << name << "' does not exist." << std::endl;
+        std::cout << "Screen '" << name << "' not found." << std::endl;
     }
 }
+// void consoleManager::screenCLI() {
+//     std::string input;
+//     std::cout << "Main Menu" << std::endl;
+//     std::cout << "Type 'screen -s <name>' to create a new screen." << std::endl;
+//     std::cout << "Type 'screen -r <name>' to reattach to a screen." << std::endl;
+//     std::cout << "----------------------------------------" << std::endl;
+
+//     while (true) {
+//         std::cout << "> ";
+//         std::getline(std::cin, input);
+//         std::istringstream iss(input);
+//         std::string subCommand, option, name;
+//         iss >> subCommand;
+
+//         if (subCommand == "screen") {
+//             iss >> option;
+//             if (option == "-s") {
+//                 iss >> name;
+//                 if (screens.find(name) != screens.end()) {
+//                     std::cout << "Screen '" << name << "' already exists." << std::endl;
+//                 } else {
+//                     createScreen(name);
+//                 }
+//             } else if (option == "-r") {
+//                 iss >> name;
+//                 showScreen(name);
+//             } else {
+//                 std::cout << "Unknown screen command. Please try again." << std::endl;
+//             }
+//         } else if (input == "exit") {
+//             std::cout << "Exiting back to the main menu." << std::endl;
+//             break;
+//         } else {
+//             std::cout << "Unknown command. Please try again." << std::endl;
+//         }
+//     }
+// }
+
+// // Function to create a new screen
+// void consoleManager::createScreen(const std::string& name) {
+//     time_t now = time(0);
+//     tm* ltm = localtime(&now);
+//     char timestamp[20];
+//     strftime(timestamp, 20, "%m/%d/%Y, %I:%M:%S %p", ltm);
+//     std::map<std::string, std::string> screenData;
+//     screenData["name"] = name;
+//     screenData["current_line"] = "0";
+//     screenData["total_lines"] = "100";
+//     screenData["timestamp"] = timestamp;
+//     screens[name] = screenData;
+//     std::cout << "Screen '" << name << "' created." << std::endl;
+// }
+
+// // Function to show the screen
+// void consoleManager::showScreen(const std::string& name) {
+//     if (screens.find(name) != screens.end()) {
+//         std::cout << "----------------------------------------" << std::endl;
+//         std::cout << "Process Name: " << screens[name]["name"] << std::endl;
+//         std::cout << "Instruction: " << screens[name]["current_line"] << "/" << screens[name]["total_lines"] << std::endl;
+//         std::cout << "Created On: " << screens[name]["timestamp"] << std::endl;
+//         std::cout << "----------------------------------------" << std::endl;
+//         std::cout << "Type 'exit' to go back to the main menu." << std::endl;
+//     } else {
+//         std::cout << "Screen '" << name << "' does not exist." << std::endl;
+//     }
+// }
+
+
+// // New function for handling GPU commands
+// void consoleManager::gpuCLI() {
+//     initscr();  // Start ncurses mode
+
+//     std::string header1 = "Terminal";
+//     std::string header2 = "Welcome to macOS terminal environment.";
+//     std::string header3 = "For GPU information, use the 'nvidia-smi' or 'gpu-smi' command.";
+//     std::string userPath = "/Users/username> ";
+
+//     displayMessage(header1, header2, header3, userPath);
+//     refresh();
+
+//     // Predefined process information
+//     std::vector<ProcessInfo> processes = {
+//         {0, "N/A", "N/A", 1368, "C+G", "/System/Library/CoreServices/Finder.app", "N/A"},
+//         {0, "N/A", "N/A", 1368, "C+G", "/Applications/Google Chrome.app", "N/A"},
+//         {0, "N/A", "N/A", 1368, "C+G", "/System/Library/CoreServices/SystemUIServer.app", "N/A"},
+//         {0, "N/A", "N/A", 1368, "C+G", "/Applications/Safari.app", "N/A"},
+//         {0, "N/A", "N/A", 1368, "C+G", "/Applications/Xcode.app", "N/A"},
+//     };
+
+//     handleCommandInput(processes);  // Call GPU command handler
+
+//     getch();
+//     endwin();  // End ncurses mode
+// }
