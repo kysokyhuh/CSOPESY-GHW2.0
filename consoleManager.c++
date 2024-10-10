@@ -1,17 +1,17 @@
 #include "consoleManager.h"
 #include "gpuManager.h"
+#include "marqueeManager.h"  // Include the marquee manager
 #include <iostream>
 #include <algorithm>
 #include "baseScreen.h"
 #include "ncurses.h"
 #include <sstream>
 
-
 consoleManager::consoleManager() {}
 
 void consoleManager::displayMenu() {
     std::cout << "\033[32m" << "Welcome to CSOPESY commandline!" << "\033[0m" << std::endl; // Set green text color
-    std::cout << "Type 'exit' to quit, 'clear' to clear screen, 'gpu-info' for GPU information." << std::endl; 
+    std::cout << "Type 'exit' to quit, 'clear' to clear screen, 'gpu-info' for GPU information, 'marquee-console' for marquee." << std::endl; 
     std::cout << "Enter a command: "; // Prompt for user input
 }
 
@@ -34,9 +34,10 @@ int consoleManager::validateCommand(const std::string& command) {
     else if (cmd == "SCHEDULER-STOP") return 4;
     else if (cmd == "REPORT-UTIL") return 5;
     else if (cmd == "CLEAR") return 6;
-    else if (cmd == "GPU-INFO" || cmd == "NVIDIA-SMI") return 7; // Fix comparison here
-    else if (cmd == "EXIT") return 8;
-    else return 9; 
+    else if (cmd == "GPU-INFO" || cmd == "NVIDIA-SMI") return 7;
+    else if (cmd == "MARQUEE-CONSOLE") return 8;  // Add Marquee command
+    else if (cmd == "EXIT") return 9;
+    else return 10;  // Invalid command
 }
 
 int consoleManager::handleCommand(int command) {
@@ -54,20 +55,23 @@ int consoleManager::handleCommand(int command) {
             std::cout << "Scheduler Stop command recognized." << std::endl;
             break;
         case 5:
-            BaseScreen::gpuStatusScreen(); // Assuming this function is defined in baseScreen.h
+            BaseScreen::gpuStatusScreen();  // Assuming this function is defined in baseScreen.h
             break;
         case 6:
-            std::system("clear"); 
+            std::system("clear");
             break;
         case 7:
-            gpuCLI();  // Execute the GPU-related command
+            gpuCLI();  // Trigger the GPU-related command
             break;
         case 8:
+            bouncingMarquee("Hello World in Marquee!!!", 100);  // Trigger the marquee console
+            break;
+        case 9:
             return 1;  // Exit
         default:
             std::cout << "Invalid command! Try again." << std::endl;
     }
-    return 0; // Continue the loop
+    return 0;  // Continue the loop
 }
 
 // Function for screen-related commands
@@ -109,6 +113,7 @@ void consoleManager::screenCLI() {
     }
 }
 
+// Function to create a new screen
 void consoleManager::createScreen(const std::string& name) {
     time_t now = time(0);
     tm* ltm = localtime(&now);
@@ -125,6 +130,7 @@ void consoleManager::createScreen(const std::string& name) {
     std::cout << "Screen '" << name << "' created." << std::endl;
 }
 
+// Function to show an existing screen
 void consoleManager::showScreen(const std::string& name) {
     if (screens.find(name) != screens.end()) {
         std::map<std::string, std::string>& screenData = screens[name];
@@ -137,6 +143,7 @@ void consoleManager::showScreen(const std::string& name) {
     }
 }
 
+// Function to handle GPU-related commands
 void consoleManager::gpuCLI() {
     initscr();  // Start ncurses mode
 
