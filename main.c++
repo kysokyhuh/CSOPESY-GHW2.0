@@ -20,7 +20,8 @@ int main() {
 /*
     How to run sa terminal?
 
-    g++ -std=c++11 -lncurses consoleManager.c++ baseScreen.c++ screenManager.c++ gpuManager.c++ main.c++ -o App
+    g++ -std=c++11 -lncurses consoleManager.c++ baseScreen.c++ screenManager.c++ gpuManager.c++ marqueeManager.c++ main.c++ -o App
+
     ./App
 
 */

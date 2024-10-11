@@ -1,26 +1,19 @@
 #include "baseScreen.h"
+#include <iostream>
 #include <ncurses.h>
 #include <unistd.h>
-#include <cstdlib>
 
+// Function to simulate GPU status display using ncurses
 void BaseScreen::gpuStatusScreen() {
-    initscr();
-    noecho();
-    cbreak();
+    initscr();            // Start ncurses mode
+    noecho();             // Disable echoing
+    curs_set(FALSE);      // Hide the cursor
+    int row, col;
+    getmaxyx(stdscr, row, col);  // Get screen size
 
-    WINDOW* win = newwin(10, 40, 10, 10);
-    nodelay(win, TRUE);
+    mvprintw(row / 2, (col - 20) / 2, "GPU Status: Active");  // Display GPU status
+    refresh();
+    sleep(2);  // Pause for 2 seconds
 
-    int ch;
-    while ((ch = wgetch(win)) != 'q') {
-        // Dummy GPU status display code
-        mvwprintw(win, 1, 1, "GPU Status");
-        int gpuTemp = 50 + rand() % 30;
-        mvwprintw(win, 2, 1, "Temperature: %d°C", gpuTemp);
-        wrefresh(win);
-        usleep(500000);
-    }
-
-    delwin(win);
-    endwin();
+    endwin();  // End ncurses mode
 }
