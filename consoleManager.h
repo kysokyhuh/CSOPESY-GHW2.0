@@ -2,6 +2,7 @@
 #define CONSOLE_MANAGER_H
 
 #include <string>
+#include <deque> // Use deque instead of vector for round-robin scheduling
 #include <queue>
 #include <mutex>
 #include <vector>
@@ -34,15 +35,16 @@ public:
     void stopSchedulerTest();
     void reattachProcessScreen(const std::string& processName);
     void createDummyProcess();  
+    void executeProcessForQuantum(Process* process); // RR-specific helper function
+    void processGenerator(); // For both FCFS and RR, depending on config setting
+    void workerThread(); // Thread pool worker function
 
 private:
-    void processGenerator();
     void startProcessScreen(const std::string& processName);
-    void workerThread();
 
     // Configuration parameters
     int numCPUs = 4;
-    std::string schedulerType = "rr";
+    std::string schedulerType = "rr"; // Default scheduler set to RR
     int quantumCycles = 5;
     int batchProcessFreq = 1;
     int minInstructions = 1000;
@@ -52,7 +54,7 @@ private:
     // Process management variables
     Initializer initializer;
     std::vector<Process*> finishedProcesses;
-    std::vector<Process*> runningProcesses;
+    std::deque<Process*> runningProcesses; // Changed to deque for RR scheduling
     std::atomic<bool> stopScheduler;
     bool generatingProcesses = false;
     std::thread processGeneratorThread;
