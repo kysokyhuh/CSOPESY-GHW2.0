@@ -1,0 +1,28 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "build",
+        "type": "shell",
+        "command": "clang++",
+        "args": [
+          "-std=c++11",
+          "-lncurses",
+          "consoleManager.cpp",
+          "initializer.cpp",
+          "baseScreen.cpp",
+          "gpuManager.cpp",
+          "marqueeManager.cpp",
+          "process.cpp",
+          "screenProcess.cpp",
+          "main.cpp",
+          "-o",
+          "CSOPESYApp"
+        ],
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        }
+      }
+    ]
+  }
