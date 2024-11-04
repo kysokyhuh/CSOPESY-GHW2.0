@@ -6,6 +6,9 @@
 #include <mutex>
 #include <vector>
 #include <thread>
+#include <condition_variable>
+#include <atomic>
+#include <functional>
 #include <fstream>
 #include "initializer.h"
 #include "process.h"
@@ -13,6 +16,8 @@
 class consoleManager {
 public:
     consoleManager();
+    ~consoleManager();
+
     void displayMenu();
     void displayHeader();
     int validateCommand(const std::string& command);
@@ -21,15 +26,21 @@ public:
     void generateProcessReport(const std::string& filename);
     void listProcesses(std::ostream& os);
     void spawnNewProcess();
-    void startCustomProcess(const std::string& processName); // Declaration for custom process
+    void startCustomProcess(const std::string& processName);
+    void handleProcessSmi(const std::string& processName);
+
+    // Scheduler commands
+    void startSchedulerTest();
+    void stopSchedulerTest();
+    void reattachProcessScreen(const std::string& processName);
+    void createDummyProcess();  
 
 private:
-    // Other private methods and members
     void processGenerator();
     void startProcessScreen(const std::string& processName);
-    void reattachProcessScreen(const std::string& processName);
+    void workerThread();
 
-    // Configuration parameters and member variables
+    // Configuration parameters
     int numCPUs = 4;
     std::string schedulerType = "rr";
     int quantumCycles = 5;
@@ -38,18 +49,22 @@ private:
     int maxInstructions = 2000;
     int delayPerExec = 0;
 
+    // Process management variables
     Initializer initializer;
-    std::queue<Process*> processQueue;
-    std::mutex queueMutex;
     std::vector<Process*> finishedProcesses;
     std::vector<Process*> runningProcesses;
+    std::atomic<bool> stopScheduler;
     bool generatingProcesses = false;
     std::thread processGeneratorThread;
     int processGenerationFrequency = 1;
     int processCount = 1;
-
-    // Mutex to ensure thread safety when modifying process lists
     std::mutex processMutex;
+
+    // Thread pool and task queue for managing background tasks
+    std::vector<std::thread> threadPool;
+    std::queue<std::function<void()>> taskQueue;
+    std::mutex queueMutex;
+    std::condition_variable condition;
 };
 
 #endif // CONSOLE_MANAGER_H

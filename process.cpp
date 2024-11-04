@@ -6,6 +6,7 @@ Process::Process(int id, int instructionLength)
 
 // Getters for process name, core ID, progress, and total work
 std::string Process::getProcessName() const { return processName; }
+int Process::getId() const { return id; }           // Get the unique process ID
 int Process::getCoreId() const { return coreId; }
 int Process::getProgress() const { return progress; }
 int Process::getTotalWork() const { return totalWork; }

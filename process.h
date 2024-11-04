@@ -6,12 +6,14 @@
 
 class Process {
 public:
-    Process(int id, int instructionLength);  // Constructor with instruction length
+    Process(int id, int instructionLength);  // Constructor with ID and instruction length
+
     std::string getProcessName() const;      // Returns the process name
+    int getId() const;                       // Returns the unique process ID
     int getCoreId() const;                   // Returns the core ID
     int getProgress() const;                 // Returns current progress
     int getTotalWork() const;                // Returns total work
-    bool isFinished() const;                 // Checks if process is finished
+    bool isFinished() const;                 // Checks if the process is finished
     void incrementProgress();                // Simulates executing an instruction
 
     // Time-related functions
@@ -23,7 +25,7 @@ public:
     std::string processName;                 // Public for easy access in this example
 
 private:
-    int id;
+    int id;                                  // Unique ID for each process
     int coreId;
     int progress;
     int totalWork;

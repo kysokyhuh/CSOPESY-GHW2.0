@@ -17,9 +17,6 @@
 
 std::mutex processMutex;
 
-// Constructor for consoleManager
-consoleManager::consoleManager() : initializer() {}
-
 // Function to clear the console screen
 void clearScreen() {
 #ifdef _WIN32
@@ -58,19 +55,6 @@ void consoleManager::displayHeader() {
     std::cout << "                                                                     \n";
     displayMenu();
 }
-
-// int consoleManager::validateCommand(const std::string& command) {
-//     if (command == "initialize") return 1;
-//     else if (command == "scheduler-test") return 3;
-//     else if (command == "scheduler-stop") return 4;
-//     else if (command == "report-util") return 5;
-//     else if (command == "screen") return 6;
-//     else if (command == "screen -ls") return 7;
-//     else if (command.substr(0, 9) == "screen -s") return 8;
-//     else if (command.substr(0, 9) == "screen -r") return 9;
-//     else if (command == "exit") return 10;
-//     return 11; // Invalid command
-// }
 
 int consoleManager::validateCommand(const std::string& command) {
     std::string cmd = command;
@@ -174,12 +158,163 @@ void consoleManager::listProcesses(std::ostream& os) {
     os << "------------------------------------------------------------\n";
 }
 
+// void consoleManager::spawnNewProcess() {
+//     int totalLines = 1000;  // Set total lines to 1000 for each process
+
+//     // Increment process count and create a new process with a unique name and total lines
+//     Process* newProcess = new Process(processCount++, totalLines);
+//     newProcess->processName = "process" + std::to_string(processCount);
+
+//     // Lock and add to running processes
+//     {
+//         std::lock_guard<std::mutex> lock(processMutex);
+//         runningProcesses.push_back(newProcess);
+//     }
+
+//     std::string filename = newProcess->processName + ".txt";
+//     std::ofstream processFile(filename);
+
+//     // Launch the logging process in a detached thread to run in the background
+//     std::thread([this, newProcess, filename, totalLines](std::ofstream processFile) mutable {
+//         if (processFile.is_open()) {
+//             for (int i = 0; i < totalLines; ++i) {
+//                 auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+//                 processFile << "Welcome to CSOPESY command line! " << std::ctime(&now);
+//                 newProcess->incrementProgress();
+//                 std::this_thread::sleep_for(std::chrono::milliseconds(50));
+//             }
+//             processFile.close();
+//         }
+
+//         // Move process to finished processes once it completes
+//         {
+//             std::lock_guard<std::mutex> lock(processMutex);
+//             runningProcesses.erase(std::remove(runningProcesses.begin(), runningProcesses.end(), newProcess), runningProcesses.end());
+//             finishedProcesses.push_back(newProcess);
+//         }
+//     }, std::move(processFile)).detach();
+
+//     // Clear the screen and display the new process prompt
+//     clearScreen();
+//     std::cout << "Process " << newProcess->processName << ":> ";
+
+//     std::string userCommand;
+//     while (true) {
+//         std::getline(std::cin, userCommand);
+//         if (userCommand == "exit") {
+//             break;
+//         } else if (userCommand == "process-smi") {
+//             std::cout << "Process: " << newProcess->getProcessName() << "\n";
+//             std::cout << "ID: " << newProcess->getId() << "\n";  // Display the process ID
+//             std::cout << "Current instruction line: " << newProcess->getProgress() << "\n";
+//             std::cout << "Lines of code: " << newProcess->getTotalWork() << "\n";
+//             std::cout << "Process " << newProcess->processName << ":> ";
+//         } else {
+//             std::cout << "Invalid command. Type 'process-smi' to view status or 'exit' to go back to the main menu.\n";
+//             std::cout << "Process " << newProcess->processName << ":> ";
+//         }
+//     }
+// }
+
+// void consoleManager::startCustomProcess(const std::string& processName) {
+//     int totalLines = 1000;  // Set the total lines of output for each process
+
+//     // Create a new process with the user-specified name
+//     Process* newProcess = new Process(processCount++, totalLines);
+//     newProcess->processName = processName; // Use custom name from the user
+
+//     // Add the new process to the running processes list
+//     runningProcesses.push_back(newProcess);
+
+//     // Filename format: "<processName>.txt"
+//     std::string filename = processName + ".txt";
+//     std::ofstream processFile(filename);
+
+//     // Launch the process in a detached thread to allow background execution
+//     std::thread([this, newProcess, filename, totalLines](std::ofstream processFile) mutable {
+//         if (processFile.is_open()) {
+//             for (int i = 0; i < totalLines; ++i) {
+//                 auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+//                 processFile << "Welcome to CSOPESY command line! " << std::ctime(&now); // Log message with timestamp
+//                 newProcess->incrementProgress();
+//                 std::this_thread::sleep_for(std::chrono::milliseconds(50));
+//             }
+//             processFile.close();
+//         }
+
+//         // Once completed, move the process to the finished list
+//         std::lock_guard<std::mutex> lock(processMutex);
+//         runningProcesses.erase(std::remove(runningProcesses.begin(), runningProcesses.end(), newProcess), runningProcesses.end());
+//         finishedProcesses.push_back(newProcess);
+
+//     }, std::move(processFile)).detach();
+
+//     // Display custom process prompt on screen
+//     clearScreen();
+//     std::cout << "Process " << newProcess->processName << ":> ";
+
+//     std::string userCommand;
+//     while (true) {
+//         std::getline(std::cin, userCommand);
+//         if (userCommand == "exit") {
+//             break;
+//         } else if (userCommand == "process-smi") {
+//             std::cout << "Current instruction line: " << newProcess->getProgress() << "\n";
+//             std::cout << "Lines of code: " << newProcess->getTotalWork() << "\n";
+//             std::cout << "Process " << newProcess->processName << ":> ";
+//         } else {
+//             std::cout << "Invalid command. Type 'process-smi' to view status or 'exit' to go back to the main menu.\n";
+//             std::cout << "Process " << newProcess->processName << ":> ";
+//         }
+//     }
+// }
+
+// void consoleManager::startProcessScreen(const std::string& processName) {
+//     clearScreen();
+//     Process* newProcess = new Process(processCount++, 10);
+//     newProcess->processName = processName;
+//     processQueue.push(newProcess);
+
+//     std::cout << "Switched to process screen for: " << processName << "\n";
+//     std::string command;
+//     while (true) {
+//         std::cout << "Process " << processName << "> ";
+//         std::getline(std::cin, command);
+//         if (command == "process-smi") {
+//             if (newProcess->isFinished()) {
+//                 std::cout << "Process " << newProcess->processName << " - Finished!\n";
+//             } else {
+//                 newProcess->incrementProgress();
+//                 std::cout << "Progress: " << newProcess->getProgress() << " / " << newProcess->getTotalWork() << "\n";
+//             }
+//         } else if (command == "exit") {
+//             if (newProcess->isFinished()) {
+//                 finishedProcesses.push_back(newProcess);
+//             } else {
+//                 runningProcesses.push_back(newProcess);
+//             }
+//             break;
+//         } else {
+//             std::cout << "Invalid command.\n";
+//         }
+//     }
+// }
+
 void consoleManager::spawnNewProcess() {
+    std::string processName = "process" + std::to_string(processCount++);  // Default process name
+    startProcessScreen(processName);
+}
+
+void consoleManager::startCustomProcess(const std::string& processName) {
+    startProcessScreen(processName);  // Start process with the custom name
+}
+
+void consoleManager::startProcessScreen(const std::string& processName) {
     int totalLines = 1000;  // Set total lines to 1000 for each process
 
-    // Increment process count and create a new process with a unique name and total lines
-    Process* newProcess = new Process(processCount++, totalLines);
-    newProcess->processName = "process" + std::to_string(processCount);
+    // Create a new process with the specified name and total lines
+    Process* newProcess = new Process(processCount - 1, totalLines);  // Use processCount - 1 for ID consistency
+    newProcess->processName = processName;
 
     // Lock and add to running processes
     {
@@ -187,7 +322,7 @@ void consoleManager::spawnNewProcess() {
         runningProcesses.push_back(newProcess);
     }
 
-    std::string filename = newProcess->processName + ".txt";
+    std::string filename = processName + ".txt";
     std::ofstream processFile(filename);
 
     // Launch the logging process in a detached thread to run in the background
@@ -220,6 +355,8 @@ void consoleManager::spawnNewProcess() {
         if (userCommand == "exit") {
             break;
         } else if (userCommand == "process-smi") {
+            std::cout << "Process: " << newProcess->getProcessName() << "\n";
+            std::cout << "ID: " << newProcess->getId() << "\n";  // Display the process ID
             std::cout << "Current instruction line: " << newProcess->getProgress() << "\n";
             std::cout << "Lines of code: " << newProcess->getTotalWork() << "\n";
             std::cout << "Process " << newProcess->processName << ":> ";
@@ -231,141 +368,265 @@ void consoleManager::spawnNewProcess() {
 }
 
 
-
-void consoleManager::startProcessScreen(const std::string& processName) {
-    clearScreen();
-    Process* newProcess = new Process(processCount++, 10);
-    newProcess->processName = processName;
-    processQueue.push(newProcess);
-
-    std::cout << "Switched to process screen for: " << processName << "\n";
-    std::string command;
-    while (true) {
-        std::cout << "Process " << processName << "> ";
-        std::getline(std::cin, command);
-        if (command == "process-smi") {
-            if (newProcess->isFinished()) {
-                std::cout << "Process " << newProcess->processName << " - Finished!\n";
-            } else {
-                newProcess->incrementProgress();
-                std::cout << "Progress: " << newProcess->getProgress() << " / " << newProcess->getTotalWork() << "\n";
-            }
-        } else if (command == "exit") {
-            if (newProcess->isFinished()) {
-                finishedProcesses.push_back(newProcess);
-            } else {
-                runningProcesses.push_back(newProcess);
-            }
-            break;
-        } else {
-            std::cout << "Invalid command.\n";
-        }
-    }
-}
-
-// void consoleManager::reattachProcessScreen(const std::string& processName) {
-//     for (auto process : runningProcesses) {
-//         if (process->processName == processName && !process->isFinished()) {
-//             clearScreen();
-//             std::cout << "Reattaching to process: " << processName << "\n";
-//             startProcessScreen(processName);
-//             return;
-//         }
-//     }
-//     std::cout << "Process " << processName << " not found or has finished.\n";
-// }
-
+// used for screen -r <process name> command 
 void consoleManager::reattachProcessScreen(const std::string& processName) {
-    bool processFound = false;
+    Process* targetProcess = nullptr;
 
-    for (auto process : runningProcesses) {
-        if (process->processName == processName && !process->isFinished()) {
-            clearScreen();
-            std::cout << "Process Name: " << process->processName << "\n";
-            std::cout << "Current Instruction Line: " << process->getProgress() << "\n";
-            std::cout << "Lines of Code: " << process->getTotalWork() << "\n";
-            std::cout << "Process created at: " << formatTime(process->getStartTime()) << "\n";
-            processFound = true;
-            break;
+    // Search for the process in the runningProcesses
+    {
+        std::lock_guard<std::mutex> lock(processMutex);
+        for (auto process : runningProcesses) {
+            if (process->getProcessName() == processName && !process->isFinished()) {
+                targetProcess = process;
+                break;
+            }
         }
     }
 
-    // If the process was not found in running processes
-    if (!processFound) {
+    if (targetProcess) {
+        clearScreen();
+        std::cout << "Reattaching to process: " << processName << "\n";
+        std::cout << "Process " << targetProcess->getProcessName() << ":> ";
+
+        int remainingLines = targetProcess->getTotalWork() - targetProcess->getProgress();
+        std::string filename = targetProcess->getProcessName() + ".txt";
+        std::ofstream processFile(filename, std::ios::app); // Open in append mode to continue logging
+
+        // Relaunch the logging in a detached thread to continue printing the remaining lines
+        std::thread([this, targetProcess, filename, remainingLines](std::ofstream processFile) mutable {
+            if (processFile.is_open()) {
+                for (int i = 0; i < remainingLines; ++i) {
+                    auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+                    processFile << "Welcome to CSOPESY command line! " << std::ctime(&now);
+                    targetProcess->incrementProgress();
+                    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                }
+                processFile.close();
+            }
+
+            // Move process to finished processes once it completes
+            {
+                std::lock_guard<std::mutex> lock(processMutex);
+                runningProcesses.erase(std::remove(runningProcesses.begin(), runningProcesses.end(), targetProcess), runningProcesses.end());
+                finishedProcesses.push_back(targetProcess);
+            }
+        }, std::move(processFile)).detach();
+
+        // Display process prompt and handle user input
+        std::string userCommand;
+        while (true) {
+            std::getline(std::cin, userCommand);
+            if (userCommand == "exit") {
+                break;
+            } else if (userCommand == "process-smi") {
+                std::cout << "Process: " << targetProcess->getProcessName() << "\n";
+                std::cout << "ID: " << targetProcess->getId() << "\n";
+                std::cout << "Current instruction line: " << targetProcess->getProgress() << "\n";
+                std::cout << "Lines of code: " << targetProcess->getTotalWork() << "\n";
+                std::cout << "Process " << targetProcess->getProcessName() << ":> ";
+            } else {
+                std::cout << "Invalid command. Type 'process-smi' to view status or 'exit' to go back to the main menu.\n";
+                std::cout << "Process " << targetProcess->getProcessName() << ":> ";
+            }
+        }
+    } else {
         std::cout << "screen '" << processName << "' does not exist or has finished.\n";
     }
 }
 
+// void consoleManager::createDummyProcess() {
+//     Process* dummyProcess = new Process(processCount++, 1000);
+
+//     {
+//         std::lock_guard<std::mutex> lock(processMutex);
+//         runningProcesses.push_back(dummyProcess);
+//     }
+
+//     for (int i = 0; i < 1000; ++i) {
+//         dummyProcess->incrementProgress();
+//         std::this_thread::sleep_for(std::chrono::milliseconds(50));
+//     }
+
+//     {
+//         std::lock_guard<std::mutex> lock(processMutex);
+//         runningProcesses.erase(std::remove(runningProcesses.begin(), runningProcesses.end(), dummyProcess), runningProcesses.end());
+//         finishedProcesses.push_back(dummyProcess);
+//     }
+// }
+
+
+// void consoleManager::startSchedulerTest() {
+//     std::lock_guard<std::mutex> lock(queueMutex);
+//     stopScheduler = false;
+//     processGenerator();  // Start generating processes
+// }
+
+// void consoleManager::stopSchedulerTest() {
+//     std::lock_guard<std::mutex> lock(queueMutex);
+//     stopScheduler = true;
+//     condition.notify_all();  // Notify all threads to stop
+// }
+
+// void consoleManager::processGenerator() {
+//     while (!stopScheduler) {
+//         std::this_thread::sleep_for(std::chrono::milliseconds(100));  // Adjust for generation rate
+
+//         std::lock_guard<std::mutex> lock(queueMutex);
+//         taskQueue.push([this]() { createDummyProcess(); });
+//         condition.notify_one();  // Wake up a thread to process the task
+//     }
+// }
+
+
+// // Constructor: initialize thread pool
+// consoleManager::consoleManager() : initializer() {
+//     int threadCount = std::thread::hardware_concurrency();  // Set number of threads based on hardware
+//     for (int i = 0; i < threadCount; ++i) {
+//         threadPool.emplace_back(&consoleManager::workerThread, this);
+//     }
+// }
+
+
+// consoleManager::~consoleManager() {
+//     {
+//         std::lock_guard<std::mutex> lock(queueMutex);
+//         stopScheduler = true;
+//     }
+//     condition.notify_all();
+//     for (std::thread &worker : threadPool) {
+//         if (worker.joinable()) {
+//             worker.join();
+//         }
+//     }
+// }
+
+// void consoleManager::workerThread() {
+//     while (true) {
+//         std::function<void()> task;
+//         {
+//             std::unique_lock<std::mutex> lock(queueMutex);
+//             condition.wait(lock, [this] { return stopScheduler || !taskQueue.empty(); });
+
+//             if (stopScheduler && taskQueue.empty()) return;
+
+//             task = std::move(taskQueue.front());
+//             taskQueue.pop();
+//         }
+//         task();
+//     }
+// }
+
+void consoleManager::createDummyProcess() {
+    Process* dummyProcess = new Process(processCount++, 1000);  // Each dummy process prints 1000 lines
+    dummyProcess->processName = "dummy_process" + std::to_string(dummyProcess->getId());
+
+    // Lock and add to running processes
+    {
+        std::lock_guard<std::mutex> lock(processMutex);
+        runningProcesses.push_back(dummyProcess);
+    }
+
+    // Simulate printing work
+    for (int i = 0; i < 1000 && !stopScheduler; ++i) {
+        dummyProcess->incrementProgress();
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));  // Simulated work delay
+    }
+
+    // Move to finished processes once complete or stopped
+    {
+        std::lock_guard<std::mutex> lock(processMutex);
+        runningProcesses.erase(std::remove(runningProcesses.begin(), runningProcesses.end(), dummyProcess), runningProcesses.end());
+        finishedProcesses.push_back(dummyProcess);
+    }
+}
+
+// Starts generating dummy processes if not already running
+void consoleManager::startSchedulerTest() {
+    if (!processGeneratorThread.joinable()) {
+        stopScheduler = false;  // Reset the stop flag
+        processGeneratorThread = std::thread(&consoleManager::processGenerator, this);
+    } else {
+        std::cout << "Scheduler is already running.\n";
+    }
+}
+
+std::atomic<bool> stopScheduler{false};  // No need for a duplicate bool flag
+
+void consoleManager::stopSchedulerTest() {
+    stopScheduler.store(true);  // Set the atomic flag to stop scheduler
+    condition.notify_all();     // Notify all threads
+
+    // Join processGeneratorThread to ensure it stops
+    if (processGeneratorThread.joinable()) {
+        processGeneratorThread.join();
+    }
+    std::cout << "Scheduler test stopped: no more dummy processes will be generated.\n";
+}
 
 void consoleManager::processGenerator() {
-    while (generatingProcesses) {
-        std::this_thread::sleep_for(std::chrono::seconds(processGenerationFrequency));
-
+    while (!stopScheduler.load()) {
         {
             std::lock_guard<std::mutex> lock(queueMutex);
-            std::string processName = "p" + std::to_string(processCount++);
-            int instructionLength = 10;
-            Process* newProcess = new Process(processCount, instructionLength);
-            newProcess->processName = processName;
-            processQueue.push(newProcess);
-            std::cout << "Generated Process: " << processName << std::endl;
+            taskQueue.push([this]() { createDummyProcess(); });
         }
+        condition.notify_one();  // Notify worker thread
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));  // Control generation rate
     }
-    std::cout << "Process generation stopped." << std::endl;
+    std::cout << "Process generation stopped.\n";
 }
 
-void consoleManager::startCustomProcess(const std::string& processName) {
-    int totalLines = 1000;  // Set the total lines of output for each process
 
-    // Create a new process with the user-specified name
-    Process* newProcess = new Process(processCount++, totalLines);
-    newProcess->processName = processName; // Use custom name from the user
+// Constructor: initialize thread pool and set stopScheduler to false
+consoleManager::consoleManager() : initializer(), stopScheduler(false) {
+    int threadCount = std::thread::hardware_concurrency();
+    for (int i = 0; i < threadCount; ++i) {
+        threadPool.emplace_back(&consoleManager::workerThread, this);
+    }
+}
 
-    // Add the new process to the running processes list
-    runningProcesses.push_back(newProcess);
-
-    // Filename format: "<processName>.txt"
-    std::string filename = processName + ".txt";
-    std::ofstream processFile(filename);
-
-    // Launch the process in a detached thread to allow background execution
-    std::thread([this, newProcess, filename, totalLines](std::ofstream processFile) mutable {
-        if (processFile.is_open()) {
-            for (int i = 0; i < totalLines; ++i) {
-                auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-                processFile << "Welcome to CSOPESY command line! " << std::ctime(&now); // Log message with timestamp
-                newProcess->incrementProgress();
-                std::this_thread::sleep_for(std::chrono::milliseconds(50));
-            }
-            processFile.close();
+consoleManager::~consoleManager() {
+    {
+        std::lock_guard<std::mutex> lock(queueMutex);
+        stopScheduler = true;
+    }
+    condition.notify_all();
+    for (std::thread &worker : threadPool) {
+        if (worker.joinable()) {
+            worker.join();
         }
+    }
+}
 
-        // Once completed, move the process to the finished list
-        std::lock_guard<std::mutex> lock(processMutex);
-        runningProcesses.erase(std::remove(runningProcesses.begin(), runningProcesses.end(), newProcess), runningProcesses.end());
-        finishedProcesses.push_back(newProcess);
-
-    }, std::move(processFile)).detach();
-
-    // Display custom process prompt on screen
-    clearScreen();
-    std::cout << "Process " << newProcess->processName << ":> ";
-
-    std::string userCommand;
+void consoleManager::workerThread() {
     while (true) {
-        std::getline(std::cin, userCommand);
-        if (userCommand == "exit") {
-            break;
-        } else if (userCommand == "process-smi") {
-            std::cout << "Current instruction line: " << newProcess->getProgress() << "\n";
-            std::cout << "Lines of code: " << newProcess->getTotalWork() << "\n";
-            std::cout << "Process " << newProcess->processName << ":> ";
-        } else {
-            std::cout << "Invalid command. Type 'process-smi' to view status or 'exit' to go back to the main menu.\n";
-            std::cout << "Process " << newProcess->processName << ":> ";
+        std::function<void()> task;
+        {
+            std::unique_lock<std::mutex> lock(queueMutex);
+            condition.wait(lock, [this] { return stopScheduler.load() || !taskQueue.empty(); });
+
+            // Exit if stopScheduler is true and no tasks are left
+            if (stopScheduler.load() && taskQueue.empty()) return;
+
+            task = std::move(taskQueue.front());
+            taskQueue.pop();
         }
+        task();  // Execute the task
     }
 }
+
+void consoleManager::handleProcessSmi(const std::string& processName) {
+    for (auto& process : runningProcesses) {
+        if (process->getProcessName() == processName) {
+            std::cout << "Process: " << process->getProcessName() << std::endl;
+            std::cout << "ID: " << process->getId() << std::endl;
+            std::cout << "Current Instruction Line: " << process->getProgress() << std::endl;
+            std::cout << "Lines of Code: " << process->getTotalWork() << std::endl;
+            return;
+        }
+    }
+    std::cout << "Process " << processName << " not found.\n";
+}
+
 
 int consoleManager::handleCommand(int command, const std::string& commandStr) {
     if (!initializer.isInitialized() && command != 1 && command != 10) {
