@@ -1,0 +1,15 @@
+root:> report-util
+CPU utilization: 100%
+Cores used: 0
+Cores available: 4
+------------------------------------------------------------
+
+Running processes:
+
+Finished processes:
+process2  (11/02/2024 07:42:44P—)  Finished   10 / 10
+process3  (11/02/2024 07:42:44P—)  Finished   10 / 10
+process4  (11/02/2024 07:42:44P—)  Finished   10 / 10
+process5  (11/02/2024 07:42:44P—)  Finished   10 / 10
+process6  (11/02/2024 07:42:44P—)  Finished   10 / 10
+------------------------------------------------------------

@@ -2,29 +2,34 @@
 #define PROCESS_H
 
 #include <string>
-#include <queue>
-#include <mutex>
+#include <chrono>
 
 class Process {
 public:
-    int id;  // Process ID
-    std::string processName;  // Name of the process (e.g., "screen_01")
-    std::queue<std::string> printCommands;
-    std::string logFileName;  // Log file name for storing process log
+    Process(int id, int instructionLength);  // Constructor with instruction length
+    std::string getProcessName() const;      // Returns the process name
+    int getCoreId() const;                   // Returns the core ID
+    int getProgress() const;                 // Returns current progress
+    int getTotalWork() const;                // Returns total work
+    bool isFinished() const;                 // Checks if process is finished
+    void incrementProgress();                // Simulates executing an instruction
 
-    static std::mutex logMutex;  // Mutex for thread-safe logging
+    // Time-related functions
+    void setStartTime(const std::chrono::system_clock::time_point& startTime);
+    void setEndTime(const std::chrono::system_clock::time_point& endTime);
+    std::chrono::system_clock::time_point getStartTime() const;
+    std::chrono::system_clock::time_point getEndTime() const;
 
-    // Constructor to initialize the process with a unique ID
-    Process(int processId);
+    std::string processName;                 // Public for easy access in this example
 
-    // Function to log a print command executed on a specific core
-    void logCommand(const std::string& command, int coreId);
-
-    // Function to get the current timestamp
-    std::string getCurrentTime() const;
-
-    // Getter function for process name
-    std::string getProcessName() const { return processName; }  // This is the missing function
+private:
+    int id;
+    int coreId;
+    int progress;
+    int totalWork;
+    int instructionLength;
+    std::chrono::system_clock::time_point startTime;  // Start time of the process
+    std::chrono::system_clock::time_point endTime;    // End time of the process
 };
 
 #endif // PROCESS_H
