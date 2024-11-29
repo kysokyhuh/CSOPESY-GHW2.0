@@ -34,7 +34,7 @@ struct Process {
         start_time = ss.str();
     }
 
-    void runQuantum(int quantum_cycles) {
+    int runQuantum(int quantum_cycles) {
         int cycles = 0;
         is_running = true;
         while (current_step < total_instructions && cycles < quantum_cycles) {
@@ -46,6 +46,7 @@ struct Process {
             finished.store(true);
         }
         is_running = false;
+        return cycles; // Return how many cycles were used
     }
 
     std::string getStatus() const {
@@ -74,18 +75,16 @@ public:
     bool allocateMemory(std::shared_ptr<Process> process) {
         int frames_needed = (process->total_instructions + mem_per_frame - 1) / mem_per_frame;
 
-        // Debug: Log frames needed and available frames
-        std::cout << "Debug: Allocating memory for Process ID " << process->id
-                << " | Frames Needed = " << frames_needed
-                << " | Available Frames = " << availableFrames() << "\n";
-
         if (availableFrames() >= frames_needed) {
             allocateFrames(process, frames_needed);
+            used_memory += frames_needed * mem_per_frame; // Update memory usage
+            process->in_memory = true; // Confirm process is now in memory
             return true;
         } else {
             return false; // Not enough memory
         }
     }
+
 
 
     void releaseMemory(std::shared_ptr<Process> process) {
@@ -154,12 +153,12 @@ public:
 
     int calculateExternalFragmentation() const {
         int fragmentation = 0;
-        int free_contiguous = 0;
+        int free_contiguous = 0; // Declare this only once
 
         for (bool frame : memory_frames) {
             if (!frame) {
                 ++free_contiguous;
-            } else if (free_contiguous > 0) {
+            } else {
                 fragmentation += free_contiguous * mem_per_frame;
                 free_contiguous = 0;
             }
@@ -168,9 +167,9 @@ public:
         if (free_contiguous > 0) {
             fragmentation += free_contiguous * mem_per_frame;
         }
-
         return fragmentation;
     }
+
 
     int getAvailableMemory() const {
         return max_memory - used_memory;
@@ -200,11 +199,12 @@ private:
                 memory_frames[i] = true;
                 process->allocated_frames.push_back(i);
                 --frames_needed;
+                used_memory += mem_per_frame;  // Update used memory
             }
         }
-        used_memory += frames_needed * mem_per_frame;
         process->in_memory = true;
     }
+
 };
 
 // Function prototypes for commands
@@ -223,6 +223,7 @@ public:
     virtual void generateUtilizationReport() = 0;
     virtual ~Scheduler() = default;
 };
+
 
 class RoundRobinScheduler : public Scheduler {
     int quantum_cycles, min_ins, max_ins, batch_process_freq, num_cores, delays_per_exec;
@@ -243,6 +244,15 @@ public:
         std::lock_guard<std::mutex> lock(mtx);
         return process_queue;
     }
+
+    int calculateIdleTicks(int total_cores, int active_cores, int quantum_cycles) {
+        return (total_cores - active_cores) * quantum_cycles;
+    }
+
+    int calculateActiveTicks(int active_cores, int quantum_cycles) {
+        return active_cores * quantum_cycles;
+    }
+
 
     int getQuantumCycles() const {
         return quantum_cycles;
@@ -274,36 +284,44 @@ public:
         while (scheduler_running.load()) {
             std::lock_guard<std::mutex> lock(mtx);
 
-            std::vector<std::shared_ptr<Process>> allocated_processes;
+            int active_cores = 0;
 
-            for (auto &process : process_queue) {
+            for (auto& process : process_queue) {
                 if (!process->in_memory) {
                     if (memory_manager.allocateMemory(process)) {
                         std::cout << "Process " << process->id << " loaded into memory.\n";
                     } else {
-                        std::cout << "Process " << process->id << " could not be loaded into memory.\n";
+                        continue;  // Skip if memory allocation fails
                     }
                 }
+
                 if (process->in_memory && !process->finished.load()) {
-                    process->runQuantum(quantum_cycles);
+                    ++active_cores; // Count this core as active
+                    int cycles_run_in_quantum = process->runQuantum(quantum_cycles);
+
+
                     if (process->finished.load()) {
                         memory_manager.releaseMemory(process);
                         finished_processes.push_back(process);
-                    } else {
-                        allocated_processes.push_back(process);
                     }
                 }
             }
 
-            process_queue.erase(std::remove_if(process_queue.begin(), process_queue.end(), [](std::shared_ptr<Process> p) {
-                return p->finished.load();
-            }), process_queue.end());
+            // Update ticks for active and idle cores
+            int idle_ticks = RoundRobinScheduler::calculateIdleTicks(num_cores, active_cores, quantum_cycles);
+            int active_ticks = RoundRobinScheduler::calculateActiveTicks(active_cores, quantum_cycles);
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(delays_per_exec));
+            quantum_cycle_counter += quantum_cycles;
+
+            // Remove finished processes from queue
+            process_queue.erase(std::remove_if(process_queue.begin(), process_queue.end(),
+                                            [](std::shared_ptr<Process> p) { return p->finished.load(); }),
+                                process_queue.end());
         }
     }
 
 
+    
     void startScheduler() override {
         scheduler_running.store(true);
         generator_running.store(true);
@@ -442,53 +460,46 @@ void processSMI(const MemoryManager& memory_manager, const std::vector<std::shar
 
     std::cout << "\n| PROCESS-SMI V01.00 Driver Version: 01.00 |\n";
     std::cout << "---------------------------------------------\n";
-    std::cout << "CPU-Util: 100%\n";
-    std::cout << "Memory Usage: " << (used_memory / 1024) << "MiB / " << (total_memory / 1024) << "MiB\n";
-    std::cout << "Memory Util: " << memory_utilization << "%\n";
-    std::cout << "\nRunning processes and memory usage:\n";
+    std::cout << "Total Memory: " << total_memory / 1024 << "kb\n";
+    std::cout << "Used Memory: " << used_memory / 1024 << " kb\n";
+    std::cout << "Free Memory: " << free_memory / 1024 << " kb\n";
+    std::cout << "Memory Utilization: " << memory_utilization << "%\n";
 
+    std::cout << "\nRunning processes and memory usage:\n";
     for (const auto& process : processes) {
         if (process->in_memory) {
             int memory_used_by_process = process->allocated_frames.size() * memory_manager.getMemPerFrame();
-            std::cout << "process" << std::setw(2) << std::setfill('0') << process->id
-                      << " " << (memory_used_by_process / 1024) << "MiB\n";
+            std::cout << "Process " << process->id
+                      << " | Memory: " << memory_used_by_process / 1024 << " kB\n";
         }
     }
-
     std::cout << "---------------------------------------------\n";
 }
 
 
-
 void vmStat(const MemoryManager& memory_manager, int idle_ticks, int active_ticks, int active_cores, int num_cpu) {
+    int total_memory = memory_manager.getMaxMemory();
+    int used_memory = memory_manager.getUsedMemory();
+    int free_memory = memory_manager.getAvailableMemory();
+    int external_fragmentation = memory_manager.calculateExternalFragmentation();
+
     std::cout << "VMSTAT: Detailed Memory and CPU Statistics\n";
     std::cout << "==========================================\n";
-    std::cout << "Total Memory: " << memory_manager.getMaxMemory() << " KB\n";
-    std::cout << "Used Memory: " << memory_manager.getUsedMemory() << " KB\n";
-    std::cout << "Free Memory: " << memory_manager.getAvailableMemory() << " KB\n";
-    std::cout << "External Fragmentation: " << memory_manager.calculateExternalFragmentation() << " KB\n";
+    std::cout << "Total Memory: " << total_memory / 1024 << " MiB\n";
+    std::cout << "Used Memory: " << used_memory / 1024 << " MiB\n";
+    std::cout << "Free Memory: " << free_memory / 1024 << " MiB\n";
+    std::cout << "External Fragmentation: " << external_fragmentation / 1024 << " MiB\n";
+    std::cout << "------------------------------------------\n";
     std::cout << "Idle CPU Ticks: " << idle_ticks << "\n";
     std::cout << "Active CPU Ticks: " << active_ticks << "\n";
     std::cout << "Active Cores: " << active_cores << " / " << num_cpu << "\n";
-    std::cout << "------------------------------------------\n";
+    std::cout << "==========================================\n";
 }
-
-
-int calculateIdleTicks(int total_cores, int active_cores, int quantum_cycles) {
-    return (total_cores - active_cores) * quantum_cycles;
-}
-
-int calculateActiveTicks(int active_cores, int quantum_cycles) {
-    return active_cores * quantum_cycles;
-}
-
-
-
 
 int main() {
     std::atomic<bool> scheduler_running{false};
     Scheduler* scheduler = nullptr;
-    MemoryManager memory_manager(16384, 4096); // Initialize memory manager
+    MemoryManager memory_manager(16384, 4096);  // Default values, updated via config
     std::vector<std::shared_ptr<Process>> process_queue;
 
     while (true) {
@@ -497,50 +508,36 @@ int main() {
         std::getline(std::cin, command);
 
         if (command == "initialize") {
-            int num_cpu;
+            int num_cpu, max_mem, mem_per_frame, min_mem_proc, max_mem_proc;
             std::string scheduler_type;
             unsigned int quantum_cycles, batch_process_freq, min_ins, max_ins, delays_per_exec;
-            int max_mem = 16384;
-            int mem_per_frame = 4096;
-            int min_mem_proc, max_mem_proc;
             bool use_paging;
 
-            readConfig(
-                num_cpu, scheduler_type, quantum_cycles, batch_process_freq, 
-                min_ins, max_ins, delays_per_exec, max_mem, mem_per_frame, 
-                min_mem_proc, max_mem_proc, use_paging
-            );
+            readConfig(num_cpu, scheduler_type, quantum_cycles, batch_process_freq,
+                       min_ins, max_ins, delays_per_exec, max_mem, mem_per_frame, min_mem_proc, max_mem_proc, use_paging);
 
             MemoryManager memoryManager(max_mem, mem_per_frame);
 
             if (scheduler_type == "rr" && quantum_cycles > 0) {
-                scheduler = new RoundRobinScheduler(
-                            quantum_cycles, 
-                            min_ins, 
-                            max_ins, 
-                            batch_process_freq, 
-                            num_cpu, 
-                            delays_per_exec, 
-                            memory_manager
-                        );
+                scheduler = new RoundRobinScheduler(quantum_cycles, min_ins, max_ins, batch_process_freq,
+                                                     num_cpu, delays_per_exec, memoryManager);
+                std::cout << "Initialization complete. Scheduler ready.\n";
             } else {
-                std::cerr << "Error: Invalid scheduler type or configuration parameters.\n";
+                std::cerr << "Error: Invalid scheduler type or parameters.\n";
                 continue;
             }
-
-            std::cout << "Initialization complete. You can now use other commands.\n";
         } else if (command == "scheduler-test") {
+            if (!scheduler) {
+                std::cout << "Please initialize the scheduler first.\n";
+                continue;
+            }
             if (scheduler_running.load()) {
                 std::cout << "Scheduler is already running.\n";
                 continue;
             }
-            if (scheduler) {
-                scheduler_running.store(true);
-                scheduler->startScheduler();
-                std::cout << "Scheduler started.\n";
-            } else {
-                std::cout << "Initialize the scheduler first using the 'initialize' command.\n";
-            }
+            scheduler_running.store(true);
+            scheduler->startScheduler();
+            std::cout << "Scheduler started.\n";
         } else if (command == "scheduler-stop") {
             if (!scheduler_running.load()) {
                 std::cout << "Scheduler is not running.\n";
@@ -550,51 +547,55 @@ int main() {
             scheduler_running.store(false);
             std::cout << "Scheduler stopped.\n";
         } else if (command == "screen -ls") {
-            if (scheduler) {
-                scheduler->displayStatus();
-            } else {
-                std::cout << "No scheduler running.\n";
+            if (!scheduler) {
+                std::cout << "No scheduler initialized.\n";
+                continue;
             }
+            scheduler->displayStatus();
         } else if (command == "report-util") {
-            if (scheduler) {
-                scheduler->generateUtilizationReport();
+            if (!scheduler) {
+                std::cout << "No scheduler initialized.\n";
+                continue;
+            }
+            scheduler->generateUtilizationReport();
+        } else if (command == "process-smi") {
+            if (!scheduler) {
+                std::cout << "No scheduler initialized.\n";
+                continue;
+            }
+
+            auto rrScheduler = dynamic_cast<RoundRobinScheduler*>(scheduler);
+            if (rrScheduler) {
+                processSMI(memory_manager, rrScheduler->getProcessQueue());
             } else {
-                std::cout << "No scheduler running.\n";
+                std::cout << "Scheduler type does not support process-smi.\n";
+            }
+        } else if (command == "vmstat") {
+            if (!scheduler) {
+                std::cout << "No scheduler initialized.\n";
+                continue;
+            }
+
+            auto rrScheduler = dynamic_cast<RoundRobinScheduler*>(scheduler);
+            if (rrScheduler) {
+                int active_cores = std::min(static_cast<int>(rrScheduler->getProcessQueue().size()), num_cpu);
+                int idle_ticks = rrScheduler->calculateIdleTicks(num_cpu, active_cores, rrScheduler->getQuantumCycles());
+                int active_ticks = rrScheduler->calculateActiveTicks(active_cores, rrScheduler->getQuantumCycles());
+
+                vmStat(memory_manager, idle_ticks, active_ticks, active_cores, num_cpu);
+            } else {
+                std::cout << "Scheduler type does not support vmstat.\n";
             }
         } else if (command == "exit") {
             if (scheduler_running.load()) {
                 scheduler->stopScheduler();
                 delete scheduler;
-                scheduler = nullptr;
                 scheduler_running.store(false);
             }
             std::cout << "Exiting program.\n";
             break;
-        } else if (command == "process-smi") {
-            if (scheduler) {
-                auto rrScheduler = dynamic_cast<RoundRobinScheduler*>(scheduler);
-                if (rrScheduler) {
-                    processSMI(memory_manager, rrScheduler->getProcessQueue());
-                }
-            } else {
-                std::cout << "No scheduler initialized. Run 'initialize' first.\n";
-            }
-        } else if (command == "vmstat") {
-            if (scheduler) {
-                auto rrScheduler = dynamic_cast<RoundRobinScheduler*>(scheduler);
-                if (rrScheduler) {
-                    int active_cores = std::min(static_cast<int>(rrScheduler->getProcessQueue().size()), num_cpu);
-                    int idle_ticks = calculateIdleTicks(num_cpu, active_cores, rrScheduler->getQuantumCycles());
-                    int active_ticks = calculateActiveTicks(active_cores, rrScheduler->getQuantumCycles());
-                    vmStat(memory_manager, idle_ticks, active_ticks, active_cores, num_cpu);
-                } else {
-                    std::cerr << "Scheduler type is not Round Robin.\n";
-                }
-            } else {
-                std::cerr << "No scheduler initialized. Run 'initialize' first.\n";
-            }
         } else {
-            std::cout << "Invalid command. Available commands: initialize, scheduler-test, scheduler-stop, screen -ls, report-util, exit\n";
+            std::cout << "Invalid command. Available commands: initialize, scheduler-test, scheduler-stop, screen -ls, report-util, process-smi, vmstat, exit\n";
         }
     }
 
